@@ -61,7 +61,8 @@ import kotlin.math.sqrt
 open class RotationsConfigurable(
     owner: Listenable,
     fixVelocity: Boolean = true,
-    changeLook: Boolean = false
+    changeLook: Boolean = false,
+    combatPurporses: Boolean = false
 ) : Configurable("Rotations") {
 
     var angleSmooth = choices<AngleSmoothMode>(owner, "AngleSmooth", { it.choices[0] }, {
@@ -151,6 +152,8 @@ object RotationManager : Listenable {
 
     val serverRotation: Rotation
         get() = if (fakeLagging) theoreticalServerRotation else actualServerRotation
+    var previousServerRotation = Rotation.ZERO
+        private set
 
     /**
      * The rotation that was already sent to the server and is currently active.
@@ -346,8 +349,14 @@ object RotationManager : Listenable {
     val packetHandler = handler<PacketEvent>(priority = -1000) {
         val packet = it.packet
 
-        val rotation = if (packet is PlayerMoveC2SPacket && packet.changeLook) {
-            Rotation(packet.yaw, packet.pitch)
+        val rotation = if (packet is PlayerMoveC2SPacket) {
+            previousServerRotation = actualServerRotation
+
+            if (packet.changeLook) {
+                Rotation(packet.yaw, packet.pitch)
+            } else {
+                return@handler
+            }
         } else if (packet is PlayerPositionLookS2CPacket) {
             Rotation(packet.yaw, packet.pitch)
         } else if (packet is PlayerInteractItemC2SPacket) {

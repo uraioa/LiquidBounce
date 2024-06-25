@@ -100,7 +100,7 @@ object ModuleKillAura : Module("KillAura", Category.COMBAT) {
     val targetTracker = tree(TargetTracker())
 
     // Rotation
-    private val rotations = tree(RotationsConfigurable(this))
+    private val rotations = tree(RotationsConfigurable(this, combatPurporses = true))
     private val aimTimingMode by enumChoice("AimTiming", AimTimingMode.NORMAL)
 
     // Target rendering
