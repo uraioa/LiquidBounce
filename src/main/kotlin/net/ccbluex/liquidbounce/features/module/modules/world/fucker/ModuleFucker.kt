@@ -264,7 +264,15 @@ object ModuleFucker : Module("Fucker", Category.WORLD, aliases = arrayOf("BedBre
         if (FuckerEntrance.enabled && pos.hasEntrance) {
             wallRange = range
         }
-
+        if 
+            (
+                FuckerEntrance.enabled &&
+                pos.getBlock() is BedBlock &&
+                pos.offset(BedBlock.getOppositePartDirection(pos.getState())).hasEntrance
+            ) 
+        {
+            wallRange = range
+        }
         if (considerAsTarget(DestroyerTarget(pos, action, isTarget = true), range, wallRange) != true) {
             // Is there any block in the way?
             if (FuckerEntrance.enabled && FuckerEntrance.breakFree) {
