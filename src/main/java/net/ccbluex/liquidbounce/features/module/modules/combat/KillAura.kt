@@ -334,6 +334,8 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R, hideModule
     // Blink AutoBlock
     private var blinked = false
 
+    private val clickTimer = MSTimer()
+    
     /**
      * Disable kill aura module
      */
@@ -676,8 +678,10 @@ object KillAura : Module("KillAura", Category.COMBAT, Keyboard.KEY_R, hideModule
             }
 
             val entityFov = rotationDifference(entity)
-
-            if (distance <= maxRange && (fov == 180F || entityFov <= fov)) {
+            if (mc.gameSettings.keyBindAttack.isKeyDown) {
+                clickTimer.reset()
+            }
+            if (distance <= maxRange && (fov == 180F || entityFov <= fov) && (!clickTimer.hasTimePassed(150) || !clickOnly)) {
                 if (switchMode && isLookingOnEntities(entity, maxSwitchFOV.toDouble()) || !switchMode) {
                     targets += entity
                 }
