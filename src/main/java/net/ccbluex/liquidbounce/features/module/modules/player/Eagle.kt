@@ -21,6 +21,7 @@ import net.minecraft.client.settings.GameSettings
 import net.minecraft.init.Blocks.air
 import net.minecraft.util.BlockPos
 import net.minecraft.util.EnumFacing
+import kotlin.math.abs
 
 object Eagle : Module("Eagle", Category.PLAYER, hideModule = false) {
 
@@ -46,11 +47,11 @@ object Eagle : Module("Eagle", Category.PLAYER, hideModule = false) {
 
     }
 
-    fun shouldSneak() {
+    fun shouldSneak(): Boolean {
         if (mc.thePlayer == null) {
             return false
         }
-        if (!thePlayer.onGround) {
+        if (!mc.thePlayer.onGround) {
             return true
         }
         var dif = 0.5
@@ -65,9 +66,9 @@ object Eagle : Module("Eagle", Category.PLAYER, hideModule = false) {
 
             if (isReplaceable(neighbor)) {
                 val calcDif = (if (side.axis == EnumFacing.Axis.Z) {
-                    abs(neighbor.z + 0.5 - player.posZ)
+                    abs(neighbor.z + 0.5 - mc.thePlayer.posZ)
                 } else {
-                    abs(neighbor.x + 0.5 - player.posX)
+                    abs(neighbor.x + 0.5 - mc.thePlayer.posX)
                 }) - 0.5
 
                 if (calcDif < dif) {
