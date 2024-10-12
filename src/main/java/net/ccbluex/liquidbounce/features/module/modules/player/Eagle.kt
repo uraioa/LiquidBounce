@@ -10,6 +10,8 @@ import net.ccbluex.liquidbounce.event.UpdateEvent
 import net.ccbluex.liquidbounce.features.module.Module
 import net.ccbluex.liquidbounce.features.module.Category
 import net.ccbluex.liquidbounce.utils.block.BlockUtils.getBlock
+import net.ccbluex.liquidbounce.utils.block.BlockUtils.isReplaceable
+import net.ccbluex.liquidbounce.utils.misc.RandomUtils.nextFloat
 import net.ccbluex.liquidbounce.utils.timing.MSTimer
 import net.ccbluex.liquidbounce.value.BoolValue
 import net.ccbluex.liquidbounce.value.FloatValue
@@ -18,51 +20,75 @@ import net.minecraft.client.gui.Gui
 import net.minecraft.client.settings.GameSettings
 import net.minecraft.init.Blocks.air
 import net.minecraft.util.BlockPos
+import net.minecraft.util.EnumFacing
 
 object Eagle : Module("Eagle", Category.PLAYER, hideModule = false) {
 
-    private val sneakDelay by IntegerValue("SneakDelay", 0, 0..100)
-    private val onlyWhenLookingDown by BoolValue("OnlyWhenLookingDown", false)
-    private val lookDownThreshold by FloatValue("LookDownThreshold", 45f, 0f..90f) { onlyWhenLookingDown }
 
-    private val sneakTimer = MSTimer()
-    private var sneakOn = false
+    private val maxEdgeDistance: FloatValue = object : FloatValue("MaxEdgeDistance", 0f, 0f..0.5f) {
+        override fun onChange(oldValue: Float, newValue: Float) = newValue.coerceAtLeast(minEdgeDistance.get())
+    }
+    private val minEdgeDistance: FloatValue = object : FloatValue("MinEdgeDistance", 0f, 0f..0.5f) {
+        override fun onChange(oldValue: Float, newValue: Float) = newValue.coerceAtMost(maxEdgeDistance.get())
+    }
+    var eagleSneaking = false
+
+    //private var edgeDistance = nextFloat(minEdgeDistance.get(), maxEdgeDistance.get())
 
     @EventTarget
     fun onUpdate(event: UpdateEvent) {
         val thePlayer = mc.thePlayer ?: return
 
-        if (thePlayer.onGround && getBlock(BlockPos(thePlayer).down()) == air) {
-            val shouldSneak = !onlyWhenLookingDown || thePlayer.rotationPitch >= lookDownThreshold
+        val should = shouldSneak()
+        
+        mc.gameSettings.keyBindSneak.pressed = should
+        eagleSneaking = should
 
-            if (shouldSneak && !GameSettings.isKeyDown(mc.gameSettings.keyBindSneak)) {
-                if (sneakTimer.hasTimePassed(sneakDelay)) {
-                    mc.gameSettings.keyBindSneak.pressed = true
-                    sneakTimer.reset()
-                    sneakOn = false
-                }
-            } else {
-                mc.gameSettings.keyBindSneak.pressed = false
+    }
+
+    fun shouldSneak() {
+        if (mc.thePlayer == null) {
+            return false
+        }
+        if (!thePlayer.onGround) {
+            return true
+        }
+        var dif = 0.5
+        val blockPos = BlockPos(mc.thePlayer).down()
+        
+        for (side in EnumFacing.values()) {
+            if (side.axis == EnumFacing.Axis.Y) {
+                continue
             }
+        
+            val neighbor = blockPos.offset(side)
 
-            sneakOn = true
-        } else {
-            if (sneakOn) {
-                mc.gameSettings.keyBindSneak.pressed = false
-                sneakOn = false
+            if (isReplaceable(neighbor)) {
+                val calcDif = (if (side.axis == EnumFacing.Axis.Z) {
+                    abs(neighbor.z + 0.5 - player.posZ)
+                } else {
+                    abs(neighbor.x + 0.5 - player.posX)
+                }) - 0.5
+
+                if (calcDif < dif) {
+                    dif = calcDif
+                }
+                
             }
         }
-
-        if (!sneakOn && mc.currentScreen !is Gui) mc.gameSettings.keyBindSneak.pressed = GameSettings.isKeyDown(mc.gameSettings.keyBindSneak)
+        val shouldEagle = isReplaceable(blockPos) || dif < minEdgeDistance.get()
+        return shouldEagle
     }
 
     override fun onDisable() {
         if (mc.thePlayer == null)
             return
 
-        sneakOn = false
-
-        if (!GameSettings.isKeyDown(mc.gameSettings.keyBindSneak))
+        if (!GameSettings.isKeyDown(mc.gameSettings.keyBindSneak)) {
             mc.gameSettings.keyBindSneak.pressed = false
+            if (eagleSneaking && mc.thePlayer.isSneaking) {
+                mc.thePlayer.isSneaking = false
+            }
+        }
     }
 }
