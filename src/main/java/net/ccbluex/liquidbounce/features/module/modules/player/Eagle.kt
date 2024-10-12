@@ -48,7 +48,7 @@ object Eagle : Module("Eagle", Category.PLAYER, hideModule = false) {
     }
 
     fun shouldSneak(): Boolean {
-        if (mc.thePlayer == null) {
+        if (mc.thePlayer == null || mc.currentScreen is Gui) {
             return false
         }
         if (!mc.thePlayer.onGround) {
