@@ -91,6 +91,7 @@ object Eagle : Module("Eagle", Category.PLAYER, hideModule = false) {
     }
 
     override fun onDisable() {
+        lastInAir = 0L
         if (mc.thePlayer == null)
             return
 
