@@ -32,6 +32,9 @@ object Eagle : Module("Eagle", Category.PLAYER, hideModule = false) {
     private val minEdgeDistance: FloatValue = object : FloatValue("MinEdgeDistance", 0f, 0f..0.5f) {
         override fun onChange(oldValue: Float, newValue: Float) = newValue.coerceAtMost(maxEdgeDistance.get())
     }
+    private val delay by IntegerValue("Delay", 550, 0..1000)
+
+    private var lastInAir = 0L
     var eagleSneaking = false
 
     //private var edgeDistance = nextFloat(minEdgeDistance.get(), maxEdgeDistance.get())
@@ -48,10 +51,16 @@ object Eagle : Module("Eagle", Category.PLAYER, hideModule = false) {
     }
 
     fun shouldSneak(): Boolean {
+        val time = System.currentTimeMillis()
+        
         if (mc.thePlayer == null || mc.currentScreen is Gui) {
             return false
         }
         if (!mc.thePlayer.onGround) {
+            lastInAir = time
+            return true
+        }
+        if (time - lastInAir <= delay) {
             return true
         }
         var dif = 0.5
