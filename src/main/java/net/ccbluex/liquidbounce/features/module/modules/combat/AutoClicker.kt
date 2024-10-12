@@ -60,7 +60,7 @@ object AutoClicker : Module("AutoClicker", Category.COMBAT, hideModule = false) 
 
     private var lastBlocking = 0L
 
-    private var rightStartTime: Long? = null
+    private var rightStartTime = 0L
 
     private val shouldAutoClick
         get() = mc.thePlayer.capabilities.isCreativeMode || !mc.objectMouseOver.typeOfHit.isBlock
@@ -71,7 +71,7 @@ object AutoClicker : Module("AutoClicker", Category.COMBAT, hideModule = false) 
         rightLastSwing = 0L
         leftLastSwing = 0L
         lastBlocking = 0L
-        rightStartTime = null
+        rightStartTime = 0L
     }
 
     @EventTarget
@@ -84,7 +84,7 @@ object AutoClicker : Module("AutoClicker", Category.COMBAT, hideModule = false) 
                 mc.gameSettings.keyBindUseItem.pressTime = 0
             }
             if (mc.gameSettings.keyBindUseItem.isKeyDown) {
-                if (rightStartTime == null) {
+                if (rightStartTime == 0L) {
                     rightStartTime = time
                 }
                 if (right && time - rightLastSwing >= rightDelay && (rightStartDelay == 0 || time - rightStartTime > rightStartDelay)) {
@@ -93,7 +93,7 @@ object AutoClicker : Module("AutoClicker", Category.COMBAT, hideModule = false) 
                     }
                 }
             } else {
-                rightStartTime = null
+                rightStartTime = 0L
             }
 
             if (requiresNoInput) {
