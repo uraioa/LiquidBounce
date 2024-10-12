@@ -45,6 +45,7 @@ object AutoClicker : Module("AutoClicker", Category.COMBAT, hideModule = false) 
     private val jitter by BoolValue("Jitter", false)
     private val block by BoolValue("AutoBlock", false) { left }
     private val blockDelay by IntegerValue("BlockDelay", 50, 0..100) { block }
+    private val rightStartDelay by IntegerValue("RightStartDelay", 50, 0..500) { right }
 
     private val requiresNoInput by BoolValue("RequiresNoInput", false) { left }
     private val maxAngleDifference by FloatValue("MaxAngleDifference", 30f, 10f..180f) { left && requiresNoInput }
@@ -59,6 +60,8 @@ object AutoClicker : Module("AutoClicker", Category.COMBAT, hideModule = false) 
 
     private var lastBlocking = 0L
 
+    private var rightStartTime: Long? = null
+
     private val shouldAutoClick
         get() = mc.thePlayer.capabilities.isCreativeMode || !mc.objectMouseOver.typeOfHit.isBlock
 
@@ -68,6 +71,7 @@ object AutoClicker : Module("AutoClicker", Category.COMBAT, hideModule = false) 
         rightLastSwing = 0L
         leftLastSwing = 0L
         lastBlocking = 0L
+        rightStartTime = null
     }
 
     @EventTarget
@@ -79,11 +83,17 @@ object AutoClicker : Module("AutoClicker", Category.COMBAT, hideModule = false) 
             if (block && thePlayer.swingProgress > 0 && !mc.gameSettings.keyBindUseItem.isKeyDown) {
                 mc.gameSettings.keyBindUseItem.pressTime = 0
             }
-
-            if (right && mc.gameSettings.keyBindUseItem.isKeyDown && time - rightLastSwing >= rightDelay) {
-                if (!onlyBlocks || thePlayer.heldItem.item is ItemBlock) {
-                    handleRightClick(time, doubleClick)
+            if (mc.gameSettings.keyBindUseItem.isKeyDown) {
+                if (rightStartTime == null) {
+                    rightStartTime = time
                 }
+                if (right && time - rightLastSwing >= rightDelay && (rightStartDelay == 0 || time - rightStartTime > rightStartDelay)) {
+                    if (!onlyBlocks || thePlayer.heldItem.item is ItemBlock) {
+                        handleRightClick(time, doubleClick)
+                    }
+                }
+            } else {
+                rightStartTime = null
             }
 
             if (requiresNoInput) {
