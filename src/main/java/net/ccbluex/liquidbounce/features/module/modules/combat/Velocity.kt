@@ -40,6 +40,7 @@ import net.minecraft.network.play.client.C0FPacketConfirmTransaction
 import net.minecraft.network.play.server.S12PacketEntityVelocity
 import net.minecraft.network.play.server.S27PacketExplosion
 import net.minecraft.network.play.server.S32PacketConfirmTransaction
+import net.minecraft.potion.Potion
 import net.minecraft.util.AxisAlignedBB
 import net.minecraft.util.BlockPos
 import net.minecraft.util.EnumFacing.DOWN
@@ -96,7 +97,45 @@ object Velocity : Module("Velocity", Category.COMBAT, hideModule = false) {
     { jumpCooldownMode == "Ticks" && mode == "Jump" }
     private val hitsUntilJump by IntegerValue("ReceivedHitsUntilJump", 2, 0..5)
     { jumpCooldownMode == "ReceivedHits" && mode == "Jump" }
-
+    
+    private val speedValue = BoolValue("Speed", false) { mode == "Jump" }
+    private val moveSlowDownValue = BoolValue("Slowness", false) { mode == "Jump" }
+    private val hasteValue = BoolValue("Haste", false) { mode == "Jump" }
+    private val digSlowDownValue = BoolValue("MiningFatigue", false) { mode == "Jump" }
+    private val blindnessValue = BoolValue("Blindness", false) { mode == "Jump" }
+    private val strengthValue = BoolValue("Strength", false) { mode == "Jump" }
+    private val jumpBoostValue = BoolValue("JumpBoost", false) { mode == "Jump" }
+    private val weaknessValue = BoolValue("Weakness", false) { mode == "Jump" }
+    private val regenerationValue = BoolValue("Regeneration", false) { mode == "Jump" }
+    private val witherValue = BoolValue("Wither", false) { mode == "Jump" }
+    private val resistanceValue = BoolValue("Resistance", false) { mode == "Jump" }
+    private val fireResistanceValue = BoolValue("FireResistance", false) { mode == "Jump" }
+    private val absorptionValue = BoolValue("Absorption", false) { mode == "Jump" }
+    private val healthBoostValue = BoolValue("HealthBoost", false) { mode == "Jump" }
+    private val poisonValue = BoolValue("Poison", false) { mode == "Jump" }
+    private val saturationValue = BoolValue("Saturation", false) { mode == "Jump" }
+    private val waterBreathingValue = BoolValue("WaterBreathing", false) { mode == "Jump" }
+    
+    private val potionMap = mapOf(
+        Potion.moveSpeed.id to speedValue,
+        Potion.moveSlowdown.id to moveSlowDownValue,
+        Potion.digSpeed.id to hasteValue,
+        Potion.digSlowdown.id to digSlowDownValue,
+        Potion.blindness.id to blindnessValue,
+        Potion.damageBoost.id to strengthValue,
+        Potion.jump.id to jumpBoostValue,
+        Potion.weakness.id to weaknessValue,
+        Potion.regeneration.id to regenerationValue,
+        Potion.wither.id to witherValue,
+        Potion.resistance.id to resistanceValue,
+        Potion.fireResistance.id to fireResistanceValue,
+        Potion.absorption.id to absorptionValue,
+        Potion.healthBoost.id to healthBoostValue,
+        Potion.poison.id to poisonValue,
+        Potion.saturation.id to saturationValue,
+        Potion.waterBreathing.id to waterBreathingValue
+    )
+    
     // Ghost Block
     private val maxHurtTime: IntegerValue = object : IntegerValue("MaxHurtTime", 9, 1..10) {
         override fun isSupported() = mode == "GhostBlock"
@@ -590,10 +629,19 @@ object Velocity : Module("Velocity", Category.COMBAT, hideModule = false) {
     @EventTarget
     fun onStrafe(event: StrafeEvent) {
         val player = mc.thePlayer ?: return
+        var cancelJump = false
 
         if (mode == "Jump" && hasReceivedVelocity) {
             if (!player.isJumping && nextInt(endExclusive = 100) < chance && shouldJump() && player.isSprinting && player.onGround && player.hurtTime == 9) {
-                player.tryJump()
+                
+                potionMap.forEach { (potionId, value) ->
+                    if (value.get() && (mc.thePlayer.activePotionEffects.any { it.potionID == potionId })) {
+                        cancelJump = true
+                    }
+                }
+                if (!cancelJump) {
+                    player.tryJump()
+                }
                 limitUntilJump = 0
             }
             hasReceivedVelocity = false
