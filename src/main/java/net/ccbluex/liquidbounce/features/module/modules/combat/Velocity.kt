@@ -93,8 +93,19 @@ object Velocity : Module("Velocity", Category.COMBAT, hideModule = false) {
     // Jump
     private val jumpCooldownMode by ListValue("JumpCooldownMode", arrayOf("Ticks", "ReceivedHits"), "Ticks")
     { mode == "Jump" }
-    private val ticksUntilJump by IntegerValue("TicksUntilJump", 4, 0..20)
-    { jumpCooldownMode == "Ticks" && mode == "Jump" }
+
+    private val maxTicksUntilJumpValue: IntegerValue = object : IntegerValue("MaxTicksUntilJump", 5, 0..20) {
+        override fun onChange(oldValue: Int, newValue: Int) = newValue.coerceAtLeast(minTicksUntilJump)
+        override fun isSupported() = jumpCooldownMode == "Ticks" && mode == "Jump"
+    }
+    private val maxTicksUntilJump by maxTicksUntilJump
+
+    private val minTicksUntilJump by object : IntegerValue("MinTicksUntilJump", 4, 0..20) {
+        override fun onChange(oldValue: Int, newValue: Int) = newValue.coerceAtMost(maxTicksUntilJump)
+        override fun isSupported() = !maxTicksUntilJumpValue.isMinimal() && jumpCooldownMode == "Ticks" && mode == "Jump"
+    }
+    private var ticksUntilJump = nextInt(minTicksUntilJump, maxTicksUntilJump)
+    
     private val hitsUntilJump by IntegerValue("ReceivedHitsUntilJump", 2, 0..5)
     { jumpCooldownMode == "ReceivedHits" && mode == "Jump" }
     
@@ -641,6 +652,7 @@ object Velocity : Module("Velocity", Category.COMBAT, hideModule = false) {
                 }
                 if (!cancelJump) {
                     player.tryJump()
+                    ticksUntilJump = nextInt(minTicksUntilJump, maxTicksUntilJump)
                 }
                 limitUntilJump = 0
             }
