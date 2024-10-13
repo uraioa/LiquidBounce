@@ -94,17 +94,16 @@ object Velocity : Module("Velocity", Category.COMBAT, hideModule = false) {
     private val jumpCooldownMode by ListValue("JumpCooldownMode", arrayOf("Ticks", "ReceivedHits"), "Ticks")
     { mode == "Jump" }
 
-    private val maxTicksUntilJumpValue: IntegerValue = object : IntegerValue("MaxTicksUntilJump", 5, 0..20) {
-        override fun onChange(oldValue: Int, newValue: Int) = newValue.coerceAtLeast(minTicksUntilJump)
+    private val maxTicksUntilJump: IntegerValue = object : IntegerValue("MaxTicksUntilJump", 5, 0..20) {
+        override fun onChange(oldValue: Int, newValue: Int) = newValue.coerceAtLeast(minTicksUntilJump.get())
         override fun isSupported() = jumpCooldownMode == "Ticks" && mode == "Jump"
     }
-    private val maxTicksUntilJump by maxTicksUntilJump
 
-    private val minTicksUntilJump by object : IntegerValue("MinTicksUntilJump", 4, 0..20) {
-        override fun onChange(oldValue: Int, newValue: Int) = newValue.coerceAtMost(maxTicksUntilJump)
-        override fun isSupported() = !maxTicksUntilJumpValue.isMinimal() && jumpCooldownMode == "Ticks" && mode == "Jump"
+    private val minTicksUntilJump: IntegerValue = object : IntegerValue("MinTicksUntilJump", 4, 0..20) {
+        override fun onChange(oldValue: Int, newValue: Int) = newValue.coerceAtMost(maxTicksUntilJump.get())
+        override fun isSupported() = jumpCooldownMode == "Ticks" && mode == "Jump"
     }
-    private var ticksUntilJump = nextInt(minTicksUntilJump, maxTicksUntilJump)
+    private var ticksUntilJump = nextInt(minTicksUntilJump.get(), maxTicksUntilJump.get())
     
     private val hitsUntilJump by IntegerValue("ReceivedHitsUntilJump", 2, 0..5)
     { jumpCooldownMode == "ReceivedHits" && mode == "Jump" }
@@ -652,7 +651,7 @@ object Velocity : Module("Velocity", Category.COMBAT, hideModule = false) {
                 }
                 if (!cancelJump) {
                     player.tryJump()
-                    ticksUntilJump = nextInt(minTicksUntilJump, maxTicksUntilJump)
+                    ticksUntilJump = nextInt(minTicksUntilJump.get(), maxTicksUntilJump.get())
                 }
                 limitUntilJump = 0
             }
