@@ -354,15 +354,22 @@ object RotationUtils : MinecraftInstance(), Listenable {
 
         val seconds = (5..10).random() * 20
 
+	var testHSpeed = hSpeed
+	var testVSpeed = vSpeed
         if (activeSettings?.simulateShortStop == true && (sameSignTicks >= seconds || Math.random() > Rotations.shortStopRate)) {
-            yawDifference *= Rotations.shortStopSpeed
-            pitchDifference *= Rotations.shortStopSpeed
+            if (Rotations.shortStopSpeed > 0f) {
+	        testHSpeed *= Rotations.shortStopSpeed
+		testVSpeed *= Rotations.shortStopSpeed
+	    } else {
+		yawDifference = 0f
+		pitchDifference = 0f
+	    }
         }
 
         val (hFactor, vFactor) = if (smootherMode == "Relative") {
-            computeFactor(rotationDifference, hSpeed) to computeFactor(rotationDifference, vSpeed)
+            computeFactor(rotationDifference, testHSpeed) to computeFactor(rotationDifference, testVSpeed)
         } else {
-            hSpeed to vSpeed
+            testHSpeed to testVSpeed
         }
 
         var straightLineYaw = if (useStraightLinePath) {
