@@ -25,6 +25,9 @@ object Rotations : Module("Rotations", Category.RENDER, gameDetecting = false, h
     private val smoothRotations by BoolValue("SmoothRotations", false)
     private val smoothingFactor by FloatValue("SmoothFactor", 0.15f, 0.1f..0.9f) { smoothRotations }
 
+    val shortStopSpeed by FloatValue("ShortStopSpeed", 0.15f, 0.0f..1.0f)
+    val shortStopRate by FloatValue("ShortStopRate", 0.15f, 0.0f..1.0f)
+    
     val debugRotations by BoolValue("DebugRotations", false)
 
     var prevHeadPitch = 0f
