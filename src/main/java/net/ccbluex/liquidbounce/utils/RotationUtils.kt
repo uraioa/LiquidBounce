@@ -354,9 +354,9 @@ object RotationUtils : MinecraftInstance(), Listenable {
 
         val seconds = (5..10).random() * 20
 
-        if (activeSettings?.simulateShortStop == true && (sameSignTicks >= seconds || Math.random() > 0.9)) {
-            yawDifference = 0f
-            pitchDifference = 0f
+        if (activeSettings?.simulateShortStop == true && (sameSignTicks >= seconds || Math.random() > Rotations.shortStopRate)) {
+            yawDifference *= Rotations.shortStopSpeed
+            pitchDifference *= Rotations.shortStopSpeed
         }
 
         val (hFactor, vFactor) = if (smootherMode == "Relative") {
