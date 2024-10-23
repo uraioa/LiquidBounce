@@ -340,7 +340,9 @@ object RotationUtils : MinecraftInstance(), Listenable {
     ): Rotation {
         var yawDifference = angleDifference(targetRotation.yaw, currentRotation.yaw)
         var pitchDifference = angleDifference(targetRotation.pitch, currentRotation.pitch)
-
+	if (abs(yawDifference) > Rotations.minYawDiff && Rotations.useStaticPitch) {
+	    pitchDifference = angleDifference(Rotations.staticPitch, currentRotation.pitch)
+	}
         val yawTicks = ClientUtils.runTimeTicks - timeSinceIdleYaw
         val pitchTicks = ClientUtils.runTimeTicks - timeSinceIdlePitch
 
