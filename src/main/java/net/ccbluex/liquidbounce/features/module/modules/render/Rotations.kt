@@ -28,6 +28,10 @@ object Rotations : Module("Rotations", Category.RENDER, gameDetecting = false, h
     val shortStopSpeed by FloatValue("ShortStopSpeed", 0.15f, 0.0f..1.0f)
     val shortStopRate by FloatValue("ShortStopRate", 0.15f, 0.0f..1.0f)
     
+    val useStaticPitch by BoolValue("UseStaticPitch", true)
+    val staticPitch by FloatValue("StaticPitch", 90.0f, -90.0f..90.0f)
+    val minYawDiff by FloatValue("MinYawDiff", 90.0f, 0f..180.0f)
+    
     val debugRotations by BoolValue("DebugRotations", false)
 
     var prevHeadPitch = 0f
