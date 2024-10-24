@@ -24,6 +24,8 @@ import com.mojang.blaze3d.platform.GlStateManager
 import com.mojang.blaze3d.systems.RenderSystem
 import net.ccbluex.liquidbounce.render.engine.Color4b
 import net.ccbluex.liquidbounce.render.engine.Vec3
+import net.ccbluex.liquidbounce.render.engine.font.FontRenderer
+import net.ccbluex.liquidbounce.render.engine.font.FontRendererBuffers
 import net.ccbluex.liquidbounce.utils.client.mc
 import net.minecraft.client.gl.ShaderProgram
 import net.minecraft.client.render.*
@@ -47,11 +49,31 @@ val FULL_BOX = Box(0.0, 0.0, 0.0, 1.0, 1.0, 1.0)
  *
  * @property matrixStack The matrix stack for rendering.
  */
-abstract class RenderEnvironment(val matrixStack: MatrixStack) {
+sealed class RenderEnvironment(val matrixStack: MatrixStack) {
     val currentMvpMatrix: Matrix4f
         get() = matrixStack.peek().positionMatrix
 
     abstract fun relativeToCamera(pos: Vec3d): Vec3d
+
+    inline fun withMatrixStack(block: MatrixStack.() -> Unit) = with(matrixStack) {
+        push()
+        try {
+            block()
+        } finally {
+            pop()
+        }
+    }
+
+    inline fun FontRenderer.withBuffers(block: FontRenderer.(FontRendererBuffers) -> Unit) {
+        val fontBuffers = FontRendererBuffers()
+        try {
+            block(fontBuffers) // don't forget to `commit`!
+        } finally {
+            fontBuffers.draw(this)
+        }
+    }
+
+    fun FontRenderer.commit(buffer: FontRendererBuffers) = commit(this@RenderEnvironment, buffer)
 }
 
 class GUIRenderEnvironment(matrixStack: MatrixStack) : RenderEnvironment(matrixStack) {
@@ -73,7 +95,7 @@ class WorldRenderEnvironment(matrixStack: MatrixStack, val camera: Camera) : Ren
  * @param draw The block of code to be executed in the rendering environment.
  */
 @OptIn(ExperimentalContracts::class)
-fun renderEnvironmentForWorld(matrixStack: MatrixStack, draw: WorldRenderEnvironment.() -> Unit) {
+inline fun renderEnvironmentForWorld(matrixStack: MatrixStack, draw: WorldRenderEnvironment.() -> Unit) {
     contract {
         callsInPlace(draw, kotlin.contracts.InvocationKind.AT_MOST_ONCE)
     }
@@ -95,7 +117,7 @@ fun renderEnvironmentForWorld(matrixStack: MatrixStack, draw: WorldRenderEnviron
     GL11C.glDisable(GL11C.GL_LINE_SMOOTH)
 }
 
-fun renderEnvironmentForGUI(matrixStack: MatrixStack = MatrixStack(), draw: GUIRenderEnvironment.() -> Unit) {
+inline fun renderEnvironmentForGUI(matrixStack: MatrixStack = MatrixStack(), draw: GUIRenderEnvironment.() -> Unit) {
     RenderSystem.setShader { GameRenderer.getPositionTexColorProgram() }
     RenderSystem.setShaderColor(1.0f, 1.0f, 1.0f, 1.0f)
     RenderSystem.enableBlend()
@@ -111,13 +133,12 @@ fun renderEnvironmentForGUI(matrixStack: MatrixStack = MatrixStack(), draw: GUIR
  * @param pos The position vector.
  * @param draw The block of code to be executed in the transformed environment.
  */
-fun RenderEnvironment.withPosition(pos: Vec3, draw: RenderEnvironment.() -> Unit) {
+inline fun RenderEnvironment.withPosition(pos: Vec3, draw: RenderEnvironment.() -> Unit) {
     with(matrixStack) {
         push()
         translate(pos.x, pos.y, pos.z)
         try { draw() }
         finally { pop() }
-
     }
 }
 
@@ -127,20 +148,19 @@ fun RenderEnvironment.withPosition(pos: Vec3, draw: RenderEnvironment.() -> Unit
  * @param pos The position vector.
  * @param draw The block of code to be executed in the transformed environment.
  */
-fun RenderEnvironment.withPosition(pos: Vec3d, draw: RenderEnvironment.() -> Unit) {
+inline fun RenderEnvironment.withPosition(pos: Vec3d, draw: RenderEnvironment.() -> Unit) {
     with(matrixStack) {
         push()
         translate(pos.x, pos.y, pos.z)
         try { draw() }
         finally { pop() }
-
     }
 }
 
 /**
  * Shorthand for `withPosition(relativeToCamera(pos))`
  */
-fun WorldRenderEnvironment.withPositionRelativeToCamera(pos: Vec3d, draw: WorldRenderEnvironment.() -> Unit) {
+inline fun WorldRenderEnvironment.withPositionRelativeToCamera(pos: Vec3d, draw: WorldRenderEnvironment.() -> Unit) {
     val relativePos = relativeToCamera(pos)
 
     with(matrixStack) {
@@ -157,7 +177,7 @@ fun WorldRenderEnvironment.withPositionRelativeToCamera(pos: Vec3d, draw: WorldR
  * @param color4b The color transformation.
  * @param draw The block of code to be executed in the transformed environment.
  */
-fun RenderEnvironment.withColor(color4b: Color4b, draw: RenderEnvironment.() -> Unit) {
+inline fun RenderEnvironment.withColor(color4b: Color4b, draw: RenderEnvironment.() -> Unit) {
     RenderSystem.setShaderColor(color4b.r / 255f, color4b.g / 255f, color4b.b / 255f, color4b.a / 255f)
     try { draw() }
     finally { RenderSystem.setShaderColor(1f, 1f, 1f, 1f) }
@@ -169,7 +189,7 @@ fun RenderEnvironment.withColor(color4b: Color4b, draw: RenderEnvironment.() -> 
  *
  * @param draw The block of code to be executed with cull disabled.
  */
-fun RenderEnvironment.withDisabledCull(draw: RenderEnvironment.() -> Unit) {
+inline fun RenderEnvironment.withDisabledCull(draw: RenderEnvironment.() -> Unit) {
     RenderSystem.disableCull()
     try { draw() }
     finally { RenderSystem.enableCull() }
@@ -263,7 +283,7 @@ fun RenderEnvironment.drawTextureQuad(pos1: Vec3d, pos2: Vec3d) {
 }
 /**
  */
-fun RenderEnvironment.drawCustomMesh(
+inline fun RenderEnvironment.drawCustomMesh(
     drawMode: DrawMode,
     vertexFormat: VertexFormat,
     shader: ShaderProgram,
@@ -287,7 +307,7 @@ fun RenderEnvironment.drawCustomMesh(
     }
 }
 
-fun RenderEnvironment.drawQuad(pos1: Vec3d, pos2: Vec3d) {
+fun RenderEnvironment.drawQuad(pos1: Vec3, pos2: Vec3) {
     val tessellator = RenderSystem.renderThreadTesselator()
     // Begin drawing lines with position format
     val buffer = tessellator.begin(DrawMode.QUADS, VertexFormats.POSITION)
@@ -298,17 +318,45 @@ fun RenderEnvironment.drawQuad(pos1: Vec3d, pos2: Vec3d) {
 
     // Draw the vertices of the box
     with(buffer) {
-        vertex(matrix, pos1.x.toFloat(), pos2.y.toFloat(), pos1.z.toFloat())
-        vertex(matrix, pos2.x.toFloat(), pos2.y.toFloat(), pos2.z.toFloat())
-        vertex(matrix, pos2.x.toFloat(), pos1.y.toFloat(), pos2.z.toFloat())
-        vertex(matrix, pos1.x.toFloat(), pos1.y.toFloat(), pos1.z.toFloat())
+        vertex(matrix, pos1.x, pos2.y, pos1.z)
+        vertex(matrix, pos2.x, pos2.y, pos2.z)
+        vertex(matrix, pos2.x, pos1.y, pos2.z)
+        vertex(matrix, pos1.x, pos1.y, pos1.z)
 
         // Draw the outlined box
         BufferRenderer.drawWithGlobalProgram(buffer.endNullable() ?: return)
     }
 }
 
-fun RenderEnvironment.drawTriangle(p1: Vec3d, p2: Vec3d, p3: Vec3d) {
+fun RenderEnvironment.drawQuadOutlines(pos1: Vec3, pos2: Vec3) {
+    val tessellator = RenderSystem.renderThreadTesselator()
+    // Begin drawing lines with position format
+    val buffer = tessellator.begin(DrawMode.DEBUG_LINES, VertexFormats.POSITION)
+
+    RenderSystem.setShader { GameRenderer.getPositionProgram() }
+
+    val matrix = matrixStack.peek().positionMatrix
+
+    // Draw the vertices of the box
+    with(buffer) {
+
+        vertex(matrix, pos1.x, pos1.y, pos1.z)
+        vertex(matrix, pos1.x, pos2.y, pos1.z)
+
+        vertex(matrix, pos1.x, pos2.y, pos1.z)
+        vertex(matrix, pos2.x, pos2.y, pos1.z)
+
+        vertex(matrix, pos2.x, pos1.y, pos1.z)
+        vertex(matrix, pos2.x, pos2.y, pos1.z)
+
+        vertex(matrix, pos1.x, pos1.y, pos1.z)
+        vertex(matrix, pos2.x, pos1.y, pos1.z)
+
+        BufferRenderer.drawWithGlobalProgram(buffer.endNullable() ?: return)
+    }
+}
+
+fun RenderEnvironment.drawTriangle(p1: Vec3, p2: Vec3, p3: Vec3) {
     val tessellator = RenderSystem.renderThreadTesselator()
     // Begin drawing lines with position format
     val bufferBuilder = tessellator.begin(DrawMode.TRIANGLES, VertexFormats.POSITION)
@@ -319,9 +367,9 @@ fun RenderEnvironment.drawTriangle(p1: Vec3d, p2: Vec3d, p3: Vec3d) {
 
     // Draw the vertices of the box
     with(bufferBuilder) {
-        vertex(matrix, p1.x.toFloat(), p1.y.toFloat(), p1.z.toFloat())
-        vertex(matrix, p2.x.toFloat(), p2.y.toFloat(), p2.z.toFloat())
-        vertex(matrix, p3.x.toFloat(), p3.y.toFloat(), p3.z.toFloat())
+        vertex(matrix, p1.x, p1.y, p1.z)
+        vertex(matrix, p2.x, p2.y, p2.z)
+        vertex(matrix, p3.x, p3.y, p3.z)
 
         // Draw the outlined box
         BufferRenderer.drawWithGlobalProgram(bufferBuilder.end())
@@ -487,7 +535,7 @@ fun RenderEnvironment.drawGradientCircle(
  * Function to draw the outline of a circle of the size [radius]
  *
  * @param radius The radius
- * @param color The color
+ * @param color4b The color
  */
 fun RenderEnvironment.drawCircleOutline(radius: Float, color4b: Color4b) {
     val matrix = matrixStack.peek().positionMatrix
