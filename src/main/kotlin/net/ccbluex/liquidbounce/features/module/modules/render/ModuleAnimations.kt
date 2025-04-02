@@ -20,6 +20,7 @@ package net.ccbluex.liquidbounce.features.module.modules.render
 
 import net.ccbluex.liquidbounce.config.types.Choice
 import net.ccbluex.liquidbounce.config.types.ChoiceConfigurable
+import net.ccbluex.liquidbounce.config.types.NamedChoice
 import net.ccbluex.liquidbounce.config.types.ToggleableConfigurable
 import net.ccbluex.liquidbounce.event.events.PlayerStrideEvent
 import net.ccbluex.liquidbounce.event.handler
@@ -40,7 +41,8 @@ import net.minecraft.util.math.RotationAxis
  * Please credit from where you got the animation from and make sure they are willing to contribute.
  * If they are not willing to contribute, please do not add the animation to this module.
  */
-object ModuleAnimations : ClientModule("Animations", Category.RENDER) {
+@Suppress("MagicNumber")
+object ModuleAnimations : ClientModule("Animations", Category.RENDER, aliases = arrayOf("ViewModel")) {
 
     init {
         tree(MainHand)
@@ -81,9 +83,22 @@ object ModuleAnimations : ClientModule("Animations", Category.RENDER) {
     )
 
     object EquipOffset : ToggleableConfigurable(this, "EquipOffset", true) {
-        val ignoreBlocking by boolean("IgnoreBlocking", true)
-        val ignorePlace by boolean("IgnorePlace", true)
-        val ignoreAmount by boolean("IgnoreAmount", false)
+        private val ignore by multiEnumChoice("Ignore",
+            Ignores.BLOCKING,
+            Ignores.PLACE
+        )
+
+        val ignoreBlocking get() = Ignores.BLOCKING in ignore
+        val ignorePlace get() = Ignores.PLACE in ignore
+        val ignoreAmount get() = Ignores.AMOUNT in ignore
+
+        private enum class Ignores(
+            override val choiceName: String
+        ) : NamedChoice {
+            BLOCKING("Blocking"),
+            PLACE("Place"),
+            AMOUNT("Amount")
+        }
     }
 
     /**
